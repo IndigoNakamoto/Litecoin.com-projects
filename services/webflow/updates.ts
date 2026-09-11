@@ -26,7 +26,10 @@ export interface Update {
  * @param slug - The slug of the project.
  * @returns An array of Updates related to the project or an empty array if the project is not found.
  */
-export async function getUpdatesByProjectSlug(slug: string): Promise<Update[]> {
+export async function getUpdatesByProjectSlug(
+  slug: string,
+  _options?: { includeDrafts?: boolean },
+): Promise<Update[]> {
   try {
     // Fetch the project using its slug to get the project ID
     const project = await getProjectBySlug(slug)

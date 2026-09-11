@@ -121,7 +121,11 @@ export default function ProjectDetailClient({
   const recurringAmountGoal = extendedProject.recurringAmountGoal
   const litecoinRaised = project.litecoinRaised ?? 0
   const litecoinPaid = project.litecoinPaid ?? 0
-  const donationTarget = project.donationTarget
+  const parsedDonationTarget = Number(project.donationTarget)
+  const donationTarget =
+    Number.isFinite(parsedDonationTarget) && parsedDonationTarget > 0
+      ? parsedDonationTarget
+      : undefined
   const fundingProgressReady =
     addressStats !== undefined && matchingDonors !== undefined
 
@@ -143,10 +147,16 @@ export default function ProjectDetailClient({
         const stats = statsResponse as StatsResponse
         
         // Set addressStats with only the AddressStats fields
+        // 404 / "no donations" returns { message } with no totals — treat as zeros
+        // so a goal of $100k and $0 raised shows 0%, not NaN%.
+        const txCount = Number(stats?.tx_count)
+        const fundedSum = Number(stats?.funded_txo_sum)
+        const safeTxCount = Number.isFinite(txCount) ? txCount : 0
+        const safeFundedSum = Number.isFinite(fundedSum) ? fundedSum : 0
         setAddressStats({
-          tx_count: stats.tx_count,
-          funded_txo_sum: stats.funded_txo_sum,
-          supporters: stats.supporters,
+          tx_count: safeTxCount,
+          funded_txo_sum: safeFundedSum,
+          supporters: Array.isArray(stats?.supporters) ? stats.supporters : [],
         })
 
         try {
@@ -176,8 +186,8 @@ export default function ProjectDetailClient({
           isBitcoinOlympics2024
         ) {
           const matchingTotalCalc =
-            stats.funded_txo_sum * matchingMultiplier - stats.funded_txo_sum
-          setMatchingTotal(matchingTotalCalc)
+            safeFundedSum * matchingMultiplier - safeFundedSum
+          setMatchingTotal(Number.isFinite(matchingTotalCalc) ? matchingTotalCalc : 0)
         }
 
         // Monthly goal calculation
@@ -216,6 +226,12 @@ export default function ProjectDetailClient({
         }
       } catch (error) {
         console.error('Error fetching donation data:', error)
+        setAddressStats({
+          tx_count: 0,
+          funded_txo_sum: 0,
+          supporters: [],
+        })
+        setMatchingDonors([])
       }
     }
 

@@ -3,6 +3,7 @@ import { createPayloadClient, fetchAllPages } from './client'
 import type { PayloadUpdate } from './types'
 import { getProjectBySlug } from './projects'
 import type { Update } from '@/services/webflow/updates'
+import type { ProjectQueryOptions } from '@/lib/project-preview'
 import { toAppID, toPayloadID } from './id'
 import { lexicalToHtml } from '@/utils/lexicalToHtml'
 
@@ -37,10 +38,13 @@ function transformUpdate(payloadUpdate: PayloadUpdate): Update {
 /**
  * Get updates for a specific project by its slug
  */
-export async function getUpdatesByProjectSlug(slug: string): Promise<Update[]> {
+export async function getUpdatesByProjectSlug(
+  slug: string,
+  options?: ProjectQueryOptions,
+): Promise<Update[]> {
   try {
     // Fetch the project using its slug to get the project ID
-    const project = await getProjectBySlug(slug)
+    const project = await getProjectBySlug(slug, options)
 
     if (!project) {
       console.warn(`[getUpdatesByProjectSlug] No project found with slug "${slug}".`)

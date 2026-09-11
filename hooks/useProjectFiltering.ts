@@ -10,8 +10,13 @@ interface FilteredProjects {
   openBounties: Project[]
 }
 
-function filterProjects(projects: Project[]): FilteredProjects {
-  const visibleProjects = projects.filter((p) => !isHidden(p))
+function filterProjects(
+  projects: Project[],
+  options: { includeHidden?: boolean } = {},
+): FilteredProjects {
+  const visibleProjects = options.includeHidden
+    ? projects
+    : projects.filter((p) => !isHidden(p))
 
   const transformedProjects = visibleProjects.map((project) => ({
     ...project,
@@ -47,6 +52,12 @@ function filterProjects(projects: Project[]): FilteredProjects {
  * Filter and categorize projects. Computed synchronously so SSR/first paint
  * shows projects even before client hydration.
  */
-export function useProjectFiltering(projects: Project[]): FilteredProjects {
-  return useMemo(() => filterProjects(projects), [projects])
+export function useProjectFiltering(
+  projects: Project[],
+  options: { includeHidden?: boolean } = {},
+): FilteredProjects {
+  return useMemo(
+    () => filterProjects(projects, options),
+    [projects, options.includeHidden],
+  )
 }

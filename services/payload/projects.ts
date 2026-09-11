@@ -2,11 +2,13 @@ import { kv } from '@/lib/kv'
 import { createPayloadClient, fetchAllPages, resolvePayloadAssetUrl } from './client'
 import type { PayloadProject, PayloadContributor } from './types'
 import type { Project, Contributor } from '@/types/project'
+import type { ProjectQueryOptions } from '@/lib/project-preview'
 import { getContributorsByIds } from './contributors'
 import { toAppID } from './id'
 import { lexicalToHtml } from '@/utils/lexicalToHtml'
 
 const CACHE_TTL = 259200 // 3 days in seconds
+const PREVIEW_CACHE_TTL = 60 // seconds — drafts should appear quickly
 
 /**
  * Transform Payload contributor to our Contributor type
@@ -145,7 +147,10 @@ async function transformProject(
     serviceFeesCollected: payloadProject.serviceFeesCollected,
     litecoinRaised: payloadProject.litecoinRaised ?? 0,
     litecoinPaid: payloadProject.litecoinPaid ?? 0,
-    donationTarget: payloadProject.donationTarget,
+    donationTarget:
+      payloadProject.donationTarget != null
+        ? Number(payloadProject.donationTarget)
+        : undefined,
     website: payloadProject.website,
     github: payloadProject.github,
     twitter: payloadProject.twitter,
@@ -165,17 +170,31 @@ async function transformProject(
     advocates: advocates && advocates.length > 0 
       ? advocates 
       : undefined,
+    _status: payloadProject._status ?? undefined,
   }
 }
 
 /**
- * Get all published (non-hidden) projects from Payload CMS
+ * Get projects from Payload CMS.
+ * Production: published + not hidden, unauthenticated.
+ * Preview (`includeDrafts`): latest draft or published, including hidden, authenticated.
  */
-export async function getAllPublishedProjects(): Promise<Project[]> {
-  console.log('[payload:getAllPublishedProjects] Fetching projects from Payload CMS')
-  const client = createPayloadClient()
+export async function getAllPublishedProjects(
+  options: ProjectQueryOptions = {},
+): Promise<Project[]> {
+  const includeDrafts = options.includeDrafts === true
+  if (includeDrafts && !process.env.PAYLOAD_API_TOKEN) {
+    console.warn(
+      '[payload:getAllPublishedProjects] includeDrafts=true but PAYLOAD_API_TOKEN is unset; drafts will not be returned',
+    )
+  }
+  console.log(
+    `[payload:getAllPublishedProjects] Fetching projects from Payload CMS (includeDrafts=${includeDrafts})`,
+  )
+  const client = createPayloadClient({ authenticate: includeDrafts })
   
-  const cacheKey = 'payload:projects:published'
+  const cacheKey = includeDrafts ? 'payload:projects:preview' : 'payload:projects:published'
+  const cacheTtl = includeDrafts ? PREVIEW_CACHE_TTL : CACHE_TTL
   let cached: Project[] | null = null
   
   // Try to get from cache (skip if FORCE_REFRESH_PAYLOAD is set)
@@ -214,15 +233,19 @@ export async function getAllPublishedProjects(): Promise<Project[]> {
   const payloadProjects = await fetchAllPages<PayloadProject>(
     client,
     '/projects',
-    {
-      where: {
-        hidden: {
-          equals: false,
+    includeDrafts
+      ? {
+          draft: true,
+          depth: 2,
+        }
+      : {
+          where: {
+            hidden: {
+              equals: false,
+            },
+          },
+          depth: 2,
         },
-      },
-      // Populate relationships (depth 2 to include nested media like contributor profile pictures)
-      depth: 2,
-    }
   )
 
   // Transform to our Project type
@@ -248,7 +271,7 @@ export async function getAllPublishedProjects(): Promise<Project[]> {
 
   // Cache the results
   try {
-    await kv.set(cacheKey, projects, { ex: CACHE_TTL })
+    await kv.set(cacheKey, projects, { ex: cacheTtl })
     console.log('[payload:getAllPublishedProjects] Cached projects')
   } catch (error) {
     // KV not available, continue
@@ -261,11 +284,21 @@ export async function getAllPublishedProjects(): Promise<Project[]> {
 /**
  * Get a project by slug from Payload CMS
  */
-export async function getProjectBySlug(slug: string): Promise<Project | null> {
-  const client = createPayloadClient()
+export async function getProjectBySlug(
+  slug: string,
+  options: ProjectQueryOptions = {},
+): Promise<Project | null> {
+  const includeDrafts = options.includeDrafts === true
+  if (includeDrafts && !process.env.PAYLOAD_API_TOKEN) {
+    console.warn(
+      `[getProjectBySlug] includeDrafts=true but PAYLOAD_API_TOKEN is unset; draft "${slug}" will not be returned`,
+    )
+  }
+  const client = createPayloadClient({ authenticate: includeDrafts })
   
   // Try to get from cache first (skip if FORCE_REFRESH_PAYLOAD is set)
-  const cacheKey = `payload:project:${slug}`
+  const cacheKey = includeDrafts ? `payload:project:preview:${slug}` : `payload:project:${slug}`
+  const cacheTtl = includeDrafts ? PREVIEW_CACHE_TTL : CACHE_TTL
   const forceRefresh = process.env.FORCE_REFRESH_PAYLOAD === 'true'
   
   if (!forceRefresh) {
@@ -291,18 +324,29 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
   try {
     // Fetch project by slug with contributors populated
     const response = await client.get('/projects', {
-      params: {
-        where: {
-          slug: {
-            equals: slug,
+      params: includeDrafts
+        ? {
+            where: {
+              slug: {
+                equals: slug,
+              },
+            },
+            draft: true,
+            depth: 2,
+            limit: 1,
+          }
+        : {
+            where: {
+              slug: {
+                equals: slug,
+              },
+              hidden: {
+                equals: false,
+              },
+            },
+            depth: 2,
+            limit: 1,
           },
-          hidden: {
-            equals: false,
-          },
-        },
-        depth: 2, // Populate relationships (depth 2 to include nested media like contributor profile pictures)
-        limit: 1,
-      },
     })
 
     const { docs } = response.data
@@ -318,7 +362,7 @@ export async function getProjectBySlug(slug: string): Promise<Project | null> {
     // Cache the result (unless forcing refresh, in which case we already cleared it)
     if (!forceRefresh) {
       try {
-        await kv.set(cacheKey, project, { ex: CACHE_TTL })
+        await kv.set(cacheKey, project, { ex: cacheTtl })
       } catch (error) {
         // KV not available, continue
       }

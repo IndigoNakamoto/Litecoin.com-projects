@@ -21,7 +21,10 @@ export interface Post {
  * @param slug - The slug of the project.
  * @returns An array of Posts related to the project or an empty array if the project is not found.
  */
-export async function getPostsByProjectSlug(slug: string): Promise<Post[]> {
+export async function getPostsByProjectSlug(
+  slug: string,
+  _options?: { includeDrafts?: boolean },
+): Promise<Post[]> {
   try {
     // Fetch the project using its slug to get the project ID
     const project = await getProjectBySlug(slug)

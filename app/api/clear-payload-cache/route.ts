@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     // Clear main cache keys
     const mainCacheKeys = [
       'payload:projects:published',
+      'payload:projects:preview',
       'payload:contributors:active',
     ]
 
@@ -35,45 +36,31 @@ export async function POST(request: NextRequest) {
 
     // Fetch all projects from Payload to get their slugs and clear individual project caches
     try {
-      const client = createPayloadClient()
-      const payloadProjects = await fetchAllPages<{ slug: string }>(
-        client,
-        '/projects',
-        {
-          where: {
-            hidden: {
-              equals: false,
-            },
-          },
-          limit: 100, // Get all projects
-        }
-      )
-
-      // Clear individual project caches (posts, FAQs, updates use project IDs, not slugs)
-      // We need to fetch full project data to get IDs
+      const client = createPayloadClient({ authenticate: true })
       const fullProjects = await fetchAllPages<{ id: number; slug: string }>(
         client,
         '/projects',
         {
-          where: {
-            hidden: {
-              equals: false,
-            },
-          },
+          draft: true,
           limit: 100,
         }
       )
 
       for (const project of fullProjects) {
         // Clear project by slug cache
-        const projectCacheKey = `payload:project:${project.slug}`
-        try {
-          const deleted = await kv.del(projectCacheKey)
-          if (deleted > 0) {
-            clearedKeys.push(projectCacheKey)
+        const projectCacheKeys = [
+          `payload:project:${project.slug}`,
+          `payload:project:preview:${project.slug}`,
+        ]
+        for (const projectCacheKey of projectCacheKeys) {
+          try {
+            const deleted = await kv.del(projectCacheKey)
+            if (deleted > 0) {
+              clearedKeys.push(projectCacheKey)
+            }
+          } catch (err) {
+            // Key might not exist, continue
           }
-        } catch (err) {
-          // Key might not exist, continue
         }
 
         // Clear posts cache for this project

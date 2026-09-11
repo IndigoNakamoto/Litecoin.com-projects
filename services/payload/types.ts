@@ -35,6 +35,7 @@ export interface PayloadProject {
   hashtags?: Array<{ tag: string }>
   createdAt: string
   updatedAt: string
+  _status?: 'draft' | 'published' | null
 }
 
 export interface PayloadContributor {

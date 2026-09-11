@@ -10,13 +10,20 @@ export type FundingTargetProgressProps = {
   formatUSD: (value: number) => string
 }
 
+function toFiniteNumber(value: unknown, fallback = 0): number {
+  const num = typeof value === 'number' ? value : Number(value)
+  return Number.isFinite(num) ? num : fallback
+}
+
 export default function FundingTargetProgress({
   current,
   target,
   formatUSD,
 }: FundingTargetProgressProps) {
-  const safeTarget = target > 0 ? target : 1
-  const rawPercent = (current / safeTarget) * 100
+  const safeCurrent = Math.max(0, toFiniteNumber(current))
+  const parsedTarget = toFiniteNumber(target)
+  const safeTarget = parsedTarget > 0 ? parsedTarget : 1
+  const rawPercent = (safeCurrent / safeTarget) * 100
   const fillPercent = Math.min(100, rawPercent)
   const pctWhole = Math.round(fillPercent)
 
@@ -28,7 +35,7 @@ export default function FundingTargetProgress({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={pctWhole}
-        aria-label={`Funding progress: ${pctWhole} percent of $ ${formatUSD(target)} goal`}
+        aria-label={`Funding progress: ${pctWhole} percent of $ ${formatUSD(parsedTarget)} goal`}
       >
         <div
           className="h-full rounded-sm bg-[#345D9D]"
@@ -36,7 +43,7 @@ export default function FundingTargetProgress({
         />
       </div>
       <p className="text-xs text-gray-600">
-        {pctWhole}% of $ {formatUSD(target)} goal
+        {pctWhole}% of $ {formatUSD(parsedTarget)} goal
       </p>
     </div>
   )

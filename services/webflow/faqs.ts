@@ -23,7 +23,10 @@ export interface FAQItem {
  * @param slug - The slug of the project.
  * @returns An array of FAQItems related to the project or an empty array if the project is not found.
  */
-export async function getFAQsByProjectSlug(slug: string): Promise<FAQItem[]> {
+export async function getFAQsByProjectSlug(
+  slug: string,
+  _options?: { includeDrafts?: boolean },
+): Promise<FAQItem[]> {
   try {
     // Fetch the project using its slug to get the project ID
     const project = await getProjectBySlug(slug)

@@ -1,20 +1,23 @@
 import { usePayloadCMS } from './config'
+import type { ProjectQueryOptions } from '@/lib/project-preview'
 
 import * as webflow from '@/services/webflow/projects'
 import * as payload from '@/services/payload/projects'
 
-export async function getAllPublishedProjects(...args: Parameters<typeof webflow.getAllPublishedProjects>) {
+export type { ProjectQueryOptions } from '@/lib/project-preview'
+
+export async function getAllPublishedProjects(options?: ProjectQueryOptions) {
   const usePayload = usePayloadCMS()
   console.log('[cms/projects] getAllPublishedProjects - USE_PAYLOAD_CMS:', usePayload)
   return usePayload
-    ? payload.getAllPublishedProjects(...args)
-    : webflow.getAllPublishedProjects(...args)
+    ? payload.getAllPublishedProjects(options)
+    : webflow.getAllPublishedProjects()
 }
 
-export async function getProjectBySlug(...args: Parameters<typeof webflow.getProjectBySlug>) {
+export async function getProjectBySlug(slug: string, options?: ProjectQueryOptions) {
   return usePayloadCMS()
-    ? payload.getProjectBySlug(...args)
-    : webflow.getProjectBySlug(...args)
+    ? payload.getProjectBySlug(slug, options)
+    : webflow.getProjectBySlug(slug)
 }
 
 export async function getProjectSummaries(...args: Parameters<typeof webflow.getProjectSummaries>) {
@@ -22,9 +25,3 @@ export async function getProjectSummaries(...args: Parameters<typeof webflow.get
     ? payload.getProjectSummaries(...args)
     : webflow.getProjectSummaries(...args)
 }
-
-
-
-
-
-

@@ -46,10 +46,13 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       if (response.status === 404) {
-        return NextResponse.json(
-          { message: 'No donations found for this slug.' },
-          { status: 404 }
-        )
+        // No rows yet is a valid zero-stats project (drafts, new goals).
+        return NextResponse.json({
+          funded_txo_sum: 0,
+          tx_count: 0,
+          supporters: [],
+          donatedCreatedTime: [],
+        })
       }
       const errorText = await response.text()
       throw new Error(`API returned ${response.status}: ${errorText}`)

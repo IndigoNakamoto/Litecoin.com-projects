@@ -40,6 +40,7 @@ export interface Project {
   litecoinRaised?: number
   litecoinPaid?: number
   donationTarget?: number
+  _status?: 'draft' | 'published' | null
 }
 
 export interface ProjectSummary {

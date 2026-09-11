@@ -41,6 +41,8 @@ A Next.js application powering the public **`litecoin.com/projects`** and **`lit
      - The Giving Block credentials
      - KV credentials (if used)
      - `DATABASE_URL` (points at the legacy production DB if you want exact parity)
+     - Payload: `USE_PAYLOAD_CMS`, `PAYLOAD_API_URL`, `PAYLOAD_API_TOKEN` (CMS user API key; used only for draft preview)
+     - Preview host: `PROJECT_PREVIEW_HOSTS` (default `projectspreview.lite.space`; add `localhost:3000` to preview drafts locally)
 
 3. **Set up Prisma** (after upgrading Node.js)
    ```bash

@@ -18,6 +18,7 @@ import DevelopmentPortalSection from './DevelopmentPortalSection'
 
 type ProjectsPageClientProps = {
   projects: Project[]
+  includeHidden?: boolean
 }
 
 // Dynamically import PaymentModal to avoid SSR issues (react-modal)
@@ -25,11 +26,17 @@ const PaymentModal = dynamic(() => import('../payment/PaymentModal'), {
   ssr: false,
 })
 
-export default function ProjectsPageClient({ projects }: ProjectsPageClientProps) {
+export default function ProjectsPageClient({
+  projects,
+  includeHidden = false,
+}: ProjectsPageClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { dispatch } = useDonation()
-  const { openSourceProjects, completedProjects, openBounties } = useProjectFiltering(projects)
+  const { openSourceProjects, completedProjects, openBounties } = useProjectFiltering(
+    projects,
+    { includeHidden },
+  )
 
   // Modal state (Foundation-only on this page)
   const [modalOpen, setModalOpen] = useState(false)

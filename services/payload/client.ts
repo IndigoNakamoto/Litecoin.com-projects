@@ -68,10 +68,26 @@ export function resolvePayloadAssetUrl(url?: string): string | undefined {
   return url
 }
 
+export type PayloadClientOptions = {
+  /**
+   * Authenticate as a CMS user. Required to read drafts.
+   * Never enable this for production public project reads — that would leak unpublished work.
+   */
+  authenticate?: boolean
+}
+
+function authorizationHeader(apiToken: string): string {
+  // JWT (three segments) uses Payload's JWT scheme; otherwise treat as a users API key.
+  if (apiToken.split('.').length === 3) {
+    return `JWT ${apiToken}`
+  }
+  return `users API-Key ${apiToken}`
+}
+
 /**
  * Create a Payload CMS API client
  */
-export function createPayloadClient(): AxiosInstance {
+export function createPayloadClient(options: PayloadClientOptions = {}): AxiosInstance {
   const apiToken = getEnv('PAYLOAD_API_TOKEN')
   // Always resolve URL at runtime to ensure fresh env vars
   const apiUrl = resolvePayloadApiUrl()
@@ -80,9 +96,8 @@ export function createPayloadClient(): AxiosInstance {
     'Content-Type': 'application/json',
   }
 
-  // Add authentication if API token is provided
-  if (apiToken) {
-    headers.Authorization = `Bearer ${apiToken}`
+  if (options.authenticate && apiToken) {
+    headers.Authorization = authorizationHeader(apiToken)
   }
 
   // Debug logging in development (can be enabled for troubleshooting)

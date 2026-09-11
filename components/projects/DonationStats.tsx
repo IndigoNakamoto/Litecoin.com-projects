@@ -48,7 +48,13 @@ const StandardStats: React.FC<
   matchingDonors = [],
   totalPaid = 0,
 }) => {
-  const communityRaisedUSD = addressStats.funded_txo_sum
+  const communityRaisedUSD = Number(addressStats.funded_txo_sum)
+  const raisedUsd = Number.isFinite(communityRaisedUSD) ? communityRaisedUSD : 0
+  const parsedDonationTarget = Number(donationTarget)
+  const safeDonationTarget =
+    Number.isFinite(parsedDonationTarget) && parsedDonationTarget > 0
+      ? parsedDonationTarget
+      : undefined
   // Ensure matchingDonors is an array before calling reduce
   const donorsArray = Array.isArray(matchingDonors) ? matchingDonors : []
   const totalMatched = donorsArray.reduce(
@@ -73,11 +79,10 @@ const StandardStats: React.FC<
   const hasLtcPaid = litecoinPaid > 0 && !!formatLits
   const hasUsdPaid = totalPaid > 0
 
-  const showFundingTarget =
-    donationTarget != null && donationTarget > 0
+  const showFundingTarget = safeDonationTarget != null
 
   const totalRaisedTowardTarget =
-    Math.round((communityRaisedUSD + totalMatched) * 100) / 100
+    Math.round((raisedUsd + totalMatched) * 100) / 100
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -90,7 +95,7 @@ const StandardStats: React.FC<
             {fundingProgressReady ? (
               <FundingTargetProgress
                 current={totalRaisedTowardTarget}
-                target={donationTarget}
+                target={safeDonationTarget}
                 formatUSD={formatUSD}
               />
             ) : (
@@ -114,7 +119,7 @@ const StandardStats: React.FC<
             />
           )}
           <StatItem
-            value={`$ ${formatUSD(communityRaisedUSD)}`}
+            value={`$ ${formatUSD(raisedUsd)}`}
             label="Community Donations (USD)"
           />
 

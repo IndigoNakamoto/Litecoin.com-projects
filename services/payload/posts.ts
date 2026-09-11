@@ -3,6 +3,7 @@ import { createPayloadClient, fetchAllPages } from './client'
 import type { PayloadPost } from './types'
 import { getProjectBySlug } from './projects'
 import type { Post } from '@/services/webflow/posts'
+import type { ProjectQueryOptions } from '@/lib/project-preview'
 import { toAppID, toPayloadID } from './id'
 
 const CACHE_TTL = 259200 // 3 days in seconds
@@ -31,10 +32,13 @@ function transformPost(payloadPost: PayloadPost): Post {
 /**
  * Get posts for a specific project by its slug
  */
-export async function getPostsByProjectSlug(slug: string): Promise<Post[]> {
+export async function getPostsByProjectSlug(
+  slug: string,
+  options?: ProjectQueryOptions,
+): Promise<Post[]> {
   try {
     // Fetch the project using its slug to get the project ID
-    const project = await getProjectBySlug(slug)
+    const project = await getProjectBySlug(slug, options)
 
     if (!project) {
       console.warn(`[getPostsByProjectSlug] No project found with slug "${slug}".`)

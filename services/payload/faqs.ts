@@ -3,6 +3,7 @@ import { createPayloadClient, fetchAllPages } from './client'
 import type { PayloadFAQ } from './types'
 import { getProjectBySlug } from './projects'
 import type { FAQItem } from '@/services/webflow/faqs'
+import type { ProjectQueryOptions } from '@/lib/project-preview'
 import { toAppID, toPayloadID } from './id'
 import { lexicalToHtml } from '@/utils/lexicalToHtml'
 
@@ -33,10 +34,13 @@ function transformFAQ(payloadFAQ: PayloadFAQ): FAQItem {
 /**
  * Get FAQs for a specific project by its slug
  */
-export async function getFAQsByProjectSlug(slug: string): Promise<FAQItem[]> {
+export async function getFAQsByProjectSlug(
+  slug: string,
+  options?: ProjectQueryOptions,
+): Promise<FAQItem[]> {
   try {
     // Fetch the project using its slug to get the project ID
-    const project = await getProjectBySlug(slug)
+    const project = await getProjectBySlug(slug, options)
 
     if (!project) {
       console.warn(`[getFAQsByProjectSlug] No project found with slug "${slug}".`)
